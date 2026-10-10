@@ -27,9 +27,12 @@ public static class Program
             return previewApp.Run();
         }
 
+        using var reveal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\ClaudeUsageOrb.Reveal");
         using var mutex = new Mutex(true, @"Local\ClaudeUsageOrb.SingleInstance", out bool firstInstance);
         if (!firstInstance)
         {
+            // Already running: ask that instance to show its orb (it may be hidden or click-through).
+            reveal.Set();
             return 0;
         }
 
@@ -48,6 +51,7 @@ public static class Program
         {
             controller = new AppController(app);
             controller.Start();
+            ThreadPool.RegisterWaitForSingleObject(reveal, (_, _) => app.Dispatcher.BeginInvoke(() => controller?.Reveal()), null, Timeout.Infinite, executeOnlyOnce: false);
         };
         app.Exit += (_, _) => controller?.Dispose();
         return app.Run();

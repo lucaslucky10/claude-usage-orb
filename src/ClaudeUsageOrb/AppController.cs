@@ -28,6 +28,7 @@ internal sealed class AppController : IDisposable
     private readonly Native.WinEventProc foregroundProc;
     private IntPtr foregroundHook;
     private bool hiddenForFullscreen;
+    private bool fullscreenOverride;
 
     public AppController(Application app)
     {
@@ -70,8 +71,17 @@ internal sealed class AppController : IDisposable
 
         tray.LeftClick += () =>
         {
-            settings.ShowOrb = !settings.ShowOrb || hiddenForFullscreen;
-            hiddenForFullscreen = false;
+            if (hiddenForFullscreen)
+            {
+                // Explicitly asked for while a full-screen app runs: stay visible until it ends.
+                fullscreenOverride = true;
+                hiddenForFullscreen = false;
+                settings.ShowOrb = true;
+            }
+            else
+            {
+                settings.ShowOrb = !settings.ShowOrb;
+            }
             settings.Save();
             UpdateVisibility();
         };
@@ -90,6 +100,20 @@ internal sealed class AppController : IDisposable
         guard.Start();
         Render();
         Log.Info("Started.");
+    }
+
+    /// <summary>Called when the exe is started again while already running: make the orb findable.</summary>
+    public void Reveal()
+    {
+        settings.ShowOrb = true;
+        settings.ClickThrough = false;
+        fullscreenOverride = hiddenForFullscreen;
+        hiddenForFullscreen = false;
+        settings.Save();
+        orb.ApplyClickThrough();
+        UpdateVisibility();
+        orb.EnsureOnScreen();
+        orb.BringToFrontTopmost();
     }
 
     // ---------- rendering ----------
@@ -157,12 +181,18 @@ internal sealed class AppController : IDisposable
     private void Guard()
     {
         bool fullscreen = settings.HideInFullscreen && orb.Handle != IntPtr.Zero && FullscreenDetector.IsActive(orb.Handle);
-        if (fullscreen != hiddenForFullscreen)
+        if (!fullscreen)
         {
-            hiddenForFullscreen = fullscreen;
+            fullscreenOverride = false;
+        }
+        bool hide = fullscreen && !fullscreenOverride;
+        if (hide != hiddenForFullscreen)
+        {
+            hiddenForFullscreen = hide;
             UpdateVisibility();
         }
-        if (settings.AlwaysOnTop)
+        // While the menu is open it must stay above the orb.
+        if (settings.AlwaysOnTop && !menu.IsOpen)
         {
             orb.BringToFrontTopmost();
         }
@@ -332,7 +362,8 @@ internal static class FullscreenDetector
         {
             return false;
         }
-        if ((Native.GetStyle(fg, Native.GWL_STYLE) & Native.WS_CAPTION) == Native.WS_CAPTION)
+        // Maximized windows can cover the whole monitor when the taskbar auto-hides; they are not full-screen.
+        if ((Native.GetStyle(fg, Native.GWL_STYLE) & Native.WS_CAPTION) == Native.WS_CAPTION || Native.IsZoomed(fg))
         {
             return false;
         }

@@ -16,7 +16,10 @@ if (-not $Dotnet) {
     $Dotnet = if (Test-Path $local) { $local } else { 'dotnet' }
 }
 
-Get-Process ClaudeUsageOrb -ErrorAction SilentlyContinue | Stop-Process -Force
+# Only stop copies started from this repo (their exe would be locked); leave an installed copy running.
+Get-Process ClaudeUsageOrb -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -and $_.Path.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) } |
+    Stop-Process -Force
 Start-Sleep -Milliseconds 400
 
 if ($Publish) {
