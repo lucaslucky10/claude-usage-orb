@@ -1,0 +1,49 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: dotnet test ClaudeUsageOrb.slnx -c Release
+
+      - name: Publish (framework-dependent, single file)
+        run: dotnet publish src/ClaudeUsageOrb/ClaudeUsageOrb.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o out/fd
+
+      - name: Publish (self-contained, single file)
+        run: dotnet publish src/ClaudeUsageOrb/ClaudeUsageOrb.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o out/sc
+
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory release | Out-Null
+          Copy-Item out/fd/ClaudeUsageOrb.exe release/ClaudeUsageOrb.exe
+          Copy-Item out/sc/ClaudeUsageOrb.exe release/ClaudeUsageOrb-selfcontained.exe
+          Get-ChildItem release | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Tee-Object release/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeUsageOrb
+          path: release/
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
