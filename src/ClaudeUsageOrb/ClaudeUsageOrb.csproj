@@ -13,7 +13,7 @@
     <StartupObject>ClaudeUsageOrb.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\orb.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Product>Claude Usage Orb</Product>
     <Description>Tiny always-on-top orb that shows your remaining Claude plan usage.</Description>
     <Copyright>MIT License</Copyright>

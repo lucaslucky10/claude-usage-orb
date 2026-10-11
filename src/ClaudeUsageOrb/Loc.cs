@@ -52,8 +52,12 @@ internal static class Loc
         "Claude Code 로그인 정보를 찾지 못했습니다. 터미널에서 claude 를 실행해 로그인하세요.",
         "Claude Code login not found. Run `claude` in a terminal and sign in.");
     public static string AuthExpired => T(
-        "로그인 토큰이 만료됐습니다. Claude Code를 한 번 실행하면 자동으로 다시 연결됩니다.",
-        "Login token expired. Run Claude Code once and the orb reconnects automatically.");
+        "로그인 토큰이 만료됐습니다. 터미널에서 claude 를 한 번 실행하거나, 우클릭 메뉴에서 '로그인 만료 시 자동 갱신'을 켜세요.",
+        "Login token expired. Run `claude` once in a terminal, or turn on 'Renew expired login automatically' in the menu.");
+    public static string AuthRenewing => T("로그인 토큰이 만료돼 자동으로 갱신하는 중…", "Login token expired, renewing…");
+    public static string AuthRenewFailed => T(
+        "자동 갱신에 실패했습니다. 터미널에서 claude 를 실행해 다시 로그인하세요.",
+        "Automatic renewal failed. Run `claude` in a terminal and sign in again.");
     public static string RateLimited(string retry) => T($"요청 제한에 걸려 {retry} 후 다시 시도합니다.", $"Rate limited, retrying in {retry}.");
     public static string NetworkError(string retry) => T($"네트워크 오류 · {retry} 후 재시도", $"Network error, retrying in {retry}");
     public static string ServerError(int code, string retry) => T($"서버 오류 ({code}) · {retry} 후 재시도", $"Server error ({code}), retrying in {retry}");
@@ -82,6 +86,7 @@ internal static class Loc
     public static string MenuHideFullscreen => T("전체 화면 앱 실행 중엔 숨기기", "Hide while a full-screen app runs");
     public static string MenuLock => T("위치 잠금", "Lock position");
     public static string MenuClickThrough => T("클릭 통과 (트레이 메뉴로 해제)", "Click-through (undo from tray menu)");
+    public static string MenuAutoRenew => T("로그인 만료 시 자동 갱신 (사용량 아주 조금 사용)", "Renew expired login automatically (uses a tiny bit of usage)");
     public static string MenuPace => T("시간 경과 표시선", "Pace marker");
     public static string MenuDockTaskbar => T("작업 표시줄 위에 올리기", "Dock onto taskbar");
     public static string MenuResetPosition => T("기본 위치로 (작업 표시줄 옆)", "Reset position (above taskbar)");

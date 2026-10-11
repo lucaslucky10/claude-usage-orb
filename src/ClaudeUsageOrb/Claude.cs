@@ -113,9 +113,9 @@ internal sealed class UsageApi : IDisposable
 }
 
 /// <summary>
-/// Claude Code renews its own OAuth token whenever it runs. When the stored token has expired we start
-/// a harmless, zero-usage CLI command so Claude Code gets a chance to renew it. We never touch the
-/// refresh token ourselves.
+/// Claude Code only renews its OAuth token while it is actually used (`claude auth status` does not renew it).
+/// When the user opts in, an expired token is renewed by sending Claude Code the smallest possible request
+/// (Haiku, no tools, no MCP servers, not saved as a session). We never touch the refresh token ourselves.
 /// </summary>
 internal static class ClaudeCli
 {
@@ -151,26 +151,30 @@ internal static class ClaudeCli
         return null;
     }
 
-    public static async Task NudgeTokenRefreshAsync(string? configDirOverride)
+    /// <summary>Returns true when the CLI exited successfully (the caller re-reads the credentials file).</summary>
+    public static async Task<bool> RenewTokenAsync(string? configDirOverride)
     {
         string? exe = Find();
         if (exe is null)
         {
             Log.Warn("Token expired and claude CLI was not found.");
-            return;
+            return false;
         }
 
         var psi = exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
             ? new ProcessStartInfo(exe)
             : new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe")) { ArgumentList = { "/d", "/c", exe } };
-        psi.ArgumentList.Add("auth");
-        psi.ArgumentList.Add("status");
-        psi.ArgumentList.Add("--json");
+        foreach (string arg in new[] { "-p", "Reply with OK.", "--model", "haiku", "--tools", "", "--strict-mcp-config", "--no-session-persistence" })
+        {
+            psi.ArgumentList.Add(arg);
+        }
         psi.UseShellExecute = false;
         psi.CreateNoWindow = true;
+        psi.RedirectStandardInput = true;
         psi.RedirectStandardOutput = true;
         psi.RedirectStandardError = true;
-        psi.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        // An empty folder of our own, so no project CLAUDE.md or settings get loaded.
+        psi.WorkingDirectory = Directory.CreateDirectory(Path.Combine(AppPaths.DataDir, "renew")).FullName;
         if (!string.IsNullOrWhiteSpace(configDirOverride))
         {
             psi.Environment["CLAUDE_CONFIG_DIR"] = Environment.ExpandEnvironmentVariables(configDirOverride);
@@ -181,12 +185,13 @@ internal static class ClaudeCli
             using var process = Process.Start(psi);
             if (process is null)
             {
-                return;
+                return false;
             }
+            process.StandardInput.Close();
             // Output may contain account details: read it only to drain the pipes, never log it.
             Task<string> stdout = process.StandardOutput.ReadToEndAsync();
             Task<string> stderr = process.StandardError.ReadToEndAsync();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
             try
             {
                 await process.WaitForExitAsync(cts.Token);
@@ -196,11 +201,14 @@ internal static class ClaudeCli
                 try { process.Kill(entireProcessTree: true); } catch { }
             }
             await Task.WhenAll(stdout, stderr);
-            Log.Info($"Ran claude auth status to nudge token refresh (exit {(process.HasExited ? process.ExitCode : -1)}).");
+            int exit = process.HasExited ? process.ExitCode : -1;
+            Log.Info($"Ran claude -p to renew the login token (exit {exit}).");
+            return exit == 0;
         }
         catch (Exception ex)
         {
             Log.Warn($"Could not run claude CLI: {ex.Message}");
+            return false;
         }
     }
 }

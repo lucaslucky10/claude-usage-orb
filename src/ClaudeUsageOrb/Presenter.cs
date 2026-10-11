@@ -70,7 +70,7 @@ internal static class Presenter
             : NormalText;
         var orb = new OrbModel(rings, centerText, primary?.ShortLabel ?? "", centerColor, indicator);
 
-        string? status = StatusText(poller, now, snap is not null);
+        string? status = StatusText(poller, settings, now, snap is not null);
         string updated = snap is null ? "" : Loc.UpdatedAgo(Fmt.Ago(now - snap.FetchedAt));
         if (poller.IsFetching)
         {
@@ -127,14 +127,14 @@ internal static class Presenter
         return new PopupRow(limit.Label, color, remaining, Loc.Remaining(Fmt.Percent(remaining)), sub, marker, note, note is not null);
     }
 
-    public static string? StatusText(UsagePoller poller, DateTimeOffset now, bool haveData)
+    public static string? StatusText(UsagePoller poller, Settings settings, DateTimeOffset now, bool haveData)
     {
         string retry = poller.NextAttempt is { } next && next > now ? Fmt.Duration(next - now) : Loc.LessThanMinute;
         string? text = poller.Status switch
         {
             PollStatus.Loading => haveData ? null : Loc.Loading,
             PollStatus.NoCredentials => Loc.NoCredentials,
-            PollStatus.AuthExpired => Loc.AuthExpired,
+            PollStatus.AuthExpired => poller.IsRenewing ? Loc.AuthRenewing : settings.AutoRenewToken ? Loc.AuthRenewFailed : Loc.AuthExpired,
             PollStatus.RateLimited => Loc.RateLimited(retry),
             PollStatus.NetworkError => Loc.NetworkError(retry),
             PollStatus.ServerError => Loc.ServerError(poller.LastHttpStatus ?? 0, retry),

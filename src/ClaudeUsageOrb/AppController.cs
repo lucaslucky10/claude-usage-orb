@@ -282,6 +282,7 @@ internal sealed class AppController : IDisposable
             MenuSpec.Line,
             new(Loc.MenuAlwaysOnTop, () => Change(() => { settings.AlwaysOnTop = !settings.AlwaysOnTop; orb.Topmost = settings.AlwaysOnTop; orb.BringToFrontTopmost(); }), settings.AlwaysOnTop),
             new(Loc.MenuHideFullscreen, () => Change(() => { settings.HideInFullscreen = !settings.HideInFullscreen; Guard(); }), settings.HideInFullscreen),
+            new(Loc.MenuAutoRenew, () => Change(() => { settings.AutoRenewToken = !settings.AutoRenewToken; if (settings.AutoRenewToken) poller.AllowRenewNow(); }), settings.AutoRenewToken),
             new(Loc.MenuPace, () => Change(() => settings.ShowPaceMarker = !settings.ShowPaceMarker), settings.ShowPaceMarker),
             new(Loc.MenuLock, () => Change(() => settings.LockPosition = !settings.LockPosition), settings.LockPosition),
             new(Loc.MenuClickThrough, () => Change(() => { settings.ClickThrough = !settings.ClickThrough; orb.ApplyClickThrough(); }), settings.ClickThrough),

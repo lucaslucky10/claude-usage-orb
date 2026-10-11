@@ -17,7 +17,7 @@ internal enum PollStatus { Loading, Ok, RateLimited, AuthExpired, NoCredentials,
 internal sealed class UsagePoller : IDisposable
 {
     private static readonly TimeSpan MinManualGap = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan NudgeGap = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan RenewGap = TimeSpan.FromMinutes(15);
 
     private readonly Settings settings;
     private readonly UsageApi api = new();
@@ -26,7 +26,7 @@ internal sealed class UsagePoller : IDisposable
     private int rateLimitStrikes;
     private int networkStrikes;
     private int serverStrikes;
-    private DateTimeOffset lastNudge = DateTimeOffset.MinValue;
+    private DateTimeOffset lastRenew = DateTimeOffset.MinValue;
     private string? lastBody;
 
     public UsagePoller(Settings settings) => this.settings = settings;
@@ -41,6 +41,7 @@ internal sealed class UsagePoller : IDisposable
     public DateTimeOffset? NextAttempt { get; private set; }
     public string? Plan { get; private set; }
     public bool IsFetching { get; private set; }
+    public bool IsRenewing { get; private set; }
 
     /// <summary>True when the shown numbers are older than a normal refresh cycle would allow.</summary>
     public bool IsStale(DateTimeOffset now)
@@ -161,7 +162,7 @@ internal sealed class UsagePoller : IDisposable
                 {
                     return TimeSpan.FromSeconds(2);
                 }
-                await TryRecoverTokenAsync(creds, force: true);
+                await TryRecoverTokenAsync(creds);
                 SetStatus(PollStatus.AuthExpired);
                 return TimeSpan.FromSeconds(60);
             }
@@ -225,21 +226,38 @@ internal sealed class UsagePoller : IDisposable
         return delay;
     }
 
-    private async Task<ClaudeCredentials> TryRecoverTokenAsync(ClaudeCredentials current, bool force = false)
+    private async Task<ClaudeCredentials> TryRecoverTokenAsync(ClaudeCredentials current)
     {
+        ClaudeCredentials latest = CredentialStore.TryRead(settings.ClaudeConfigDir) ?? current;
         var now = DateTimeOffset.Now;
-        if (!force && now - lastNudge < NudgeGap)
+        if (!latest.IsExpired(now) && latest.AccessToken != current.AccessToken)
         {
-            return CredentialStore.TryRead(settings.ClaudeConfigDir) ?? current;
+            return latest;
         }
-        if (force && now - lastNudge < NudgeGap)
+        if (!settings.AutoRenewToken || now - lastRenew < RenewGap)
         {
-            return current;
+            return latest;
         }
-        lastNudge = now;
+        lastRenew = now;
         SetStatus(PollStatus.AuthExpired);
-        await ClaudeCli.NudgeTokenRefreshAsync(settings.ClaudeConfigDir);
-        return CredentialStore.TryRead(settings.ClaudeConfigDir) ?? current;
+        IsRenewing = true;
+        Changed?.Invoke();
+        try
+        {
+            await ClaudeCli.RenewTokenAsync(settings.ClaudeConfigDir);
+        }
+        finally
+        {
+            IsRenewing = false;
+        }
+        return CredentialStore.TryRead(settings.ClaudeConfigDir) ?? latest;
+    }
+
+    /// <summary>Lets the user retry renewal right away (e.g. after turning the option on).</summary>
+    public void AllowRenewNow()
+    {
+        lastRenew = DateTimeOffset.MinValue;
+        waitCts?.Cancel();
     }
 
     private void SetStatus(PollStatus status)

@@ -24,6 +24,9 @@ internal sealed class Settings
     public bool ClickThrough { get; set; }
     public bool ShowPaceMarker { get; set; } = true;
 
+    /// <summary>Renew an expired Claude Code login by sending one tiny Haiku request (uses a little usage).</summary>
+    public bool AutoRenewToken { get; set; }
+
     /// <summary>"session" = 5-hour window, "lowest" = whichever limit has the least left.</summary>
     public string CenterMetric { get; set; } = "session";
 

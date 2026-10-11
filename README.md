@@ -24,7 +24,7 @@
 ## 왜 만들었나 (기존 도구와의 차이)
 
 - **안정성**: 요청이 실패하거나 제한(429)에 걸려도 화면이 비지 않습니다. 마지막 값을 계속 보여 주고 주황 점으로 "오래된 값"이라고 표시합니다. `Retry-After`를 지키면서 점점 길게 기다리고, 절전 해제나 네트워크 복구, 한도 초기화 직후에는 바로 다시 받아 옵니다.
-- **로그인 만료 대응**: Claude Code의 로그인 토큰이 만료되면 사용량을 쓰지 않는 `claude auth status`를 실행해 Claude Code가 스스로 갱신하게 합니다. 이 앱은 refresh token을 직접 쓰거나 바꾸지 않습니다. 갱신이 되면 30초 안에 자동으로 다시 연결됩니다.
+- **로그인 만료 대응**: Claude Code의 로그인 토큰은 약 8시간마다 만료되고, Claude Code를 실제로 써야 갱신됩니다. 위젯은 30초마다 토큰 파일을 다시 읽어서, 터미널에서 `claude`를 한 번 실행하면 바로 다시 연결됩니다. 우클릭 메뉴의 **로그인 만료 시 자동 갱신**을 켜면 만료될 때마다 위젯이 Claude Code에 가장 작은 요청 하나를 보내 토큰을 갱신합니다(Haiku 한 줄, 도구·MCP 없음, 세션 저장 안 함, 최대 15분에 한 번). 사용량을 아주 조금 쓰므로 기본은 꺼져 있습니다. 이 앱은 refresh token을 직접 쓰거나 바꾸지 않습니다.
 - **작은 크기**: 40~128px 원 하나가 전부입니다. "작업 표시줄 위에 올리기"를 고르면 작업 표시줄 높이에 맞춰 알림 영역 옆에 붙습니다.
 - **작업 표시줄에 가려지지 않음**: 작업 표시줄을 클릭하면 다른 "항상 위" 창은 그 아래로 깔립니다. 이 위젯은 포그라운드가 바뀔 때마다 다시 맨 위로 올라옵니다. 전체 화면 동영상, 게임, 발표 중에는 자동으로 숨습니다.
 - **포커스를 뺏지 않음**: 클릭하거나 메뉴를 열어도 지금 쓰던 창의 포커스가 그대로 유지됩니다.
@@ -78,7 +78,7 @@ A small, always-on-top, non-activating orb for Windows 10/11 that shows your **r
 
 - Reads the Claude Code OAuth login from `~/.claude/.credentials.json` and calls only `api.anthropic.com/api/oauth/usage`. It uses no model tokens, never touches the refresh token, and logs no secrets.
 - Keeps showing the last good values on errors, honors `Retry-After`, backs off on 429, and refreshes after sleep/resume, after network recovery and right after a window resets.
-- When the token has expired it runs `claude auth status` so Claude Code can renew it, and reconnects within 30 s.
+- Claude Code tokens expire about every 8 hours and are only renewed when Claude Code is used. The orb re-reads the token every 30 s, and the opt-in menu option *Renew expired login automatically* sends Claude Code one tiny Haiku request (no tools, no MCP, no saved session) to renew it.
 - Stays above the taskbar (re-asserts z-order on every foreground change), can dock onto the taskbar, and hides while a full-screen app runs.
 - Tray icon with the same number. Korean and English UI.
 
