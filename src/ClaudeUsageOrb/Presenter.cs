@@ -76,6 +76,11 @@ internal static class Presenter
         {
             updated = "⟳ " + updated;
         }
+        else if (poller.ManualRefreshAt is { } manual && manual > now)
+        {
+            string wait = Fmt.Duration(manual - now);
+            status = status is null ? Loc.RefreshScheduled(wait) : $"{status}\n{Loc.RefreshScheduled(wait)}";
+        }
         var popup = new PopupModel(Loc.PopupTitle, PlanName(poller.Plan), updated, rows, snap?.ExtraUsageText, status, authProblem);
 
         string tip;

@@ -58,7 +58,10 @@ internal static class Loc
     public static string AuthRenewFailed => T(
         "자동 갱신에 실패했습니다. 터미널에서 claude 를 실행해 다시 로그인하세요.",
         "Automatic renewal failed. Run `claude` in a terminal and sign in again.");
-    public static string RateLimited(string retry) => T($"요청 제한에 걸려 {retry} 후 다시 시도합니다.", $"Rate limited, retrying in {retry}.");
+    public static string RateLimited(string retry) => T(
+        $"서버 요청 한도에 걸려 {retry} 후 다시 받아옵니다. 같은 계정을 쓰는 다른 PC·앱이 많을수록 자주 걸립니다.",
+        $"Rate limited by the server, retrying in {retry}. Other PCs/apps on the same account share this limit.");
+    public static string RefreshScheduled(string when) => T($"새로고침 예약됨 · {when} 후", $"Refresh scheduled in {when}");
     public static string NetworkError(string retry) => T($"네트워크 오류 · {retry} 후 재시도", $"Network error, retrying in {retry}");
     public static string ServerError(int code, string retry) => T($"서버 오류 ({code}) · {retry} 후 재시도", $"Server error ({code}), retrying in {retry}");
     public static string ShowingCached => T("마지막으로 받은 값을 표시하는 중", "showing last known values");
@@ -81,7 +84,9 @@ internal static class Loc
     public static string MenuCenterSession => T("세션 (5시간) 남은 양", "Session (5h) left");
     public static string MenuCenterLowest => T("가장 적게 남은 한도", "Lowest remaining limit");
     public static string MenuPoll => T("새로고침 주기", "Refresh interval");
-    public static string PollName(int seconds) => seconds < 120 ? T("1분", "1 min") : T($"{seconds / 60}분", $"{seconds / 60} min");
+    public static string PollName(int seconds) => seconds % 60 == 0
+        ? T($"{seconds / 60}분", $"{seconds / 60} min")
+        : T($"{seconds / 60}분 {seconds % 60}초", $"{seconds / 60} min {seconds % 60} s");
     public static string MenuAlwaysOnTop => T("항상 위에 표시", "Always on top");
     public static string MenuHideFullscreen => T("전체 화면 앱 실행 중엔 숨기기", "Hide while a full-screen app runs");
     public static string MenuLock => T("위치 잠금", "Lock position");

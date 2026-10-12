@@ -253,7 +253,7 @@ internal sealed class AppController : IDisposable
         };
 
         var polls = Settings.PollChoices.Select(sec => new MenuSpec(Loc.PollName(sec),
-            () => Change(() => { settings.PollSeconds = sec; poller.RefreshNow(); }), settings.PollSeconds == sec)).ToList();
+            () => Change(() => { settings.PollSeconds = sec; poller.IntervalChanged(); }), settings.PollSeconds == sec)).ToList();
 
         var languages = new List<MenuSpec>
         {
@@ -329,6 +329,7 @@ internal sealed class AppController : IDisposable
         {
             Native.UnhookWinEvent(foregroundHook);
         }
+        Log.Info("Exiting.");
         clock.Stop();
         guard.Stop();
         poller.Dispose();

@@ -7,7 +7,7 @@ namespace ClaudeUsageOrb;
 internal sealed class Settings
 {
     public static readonly int[] Sizes = { 40, 56, 72, 96, 128 };
-    public static readonly int[] PollChoices = { 60, 120, 300 };
+    public static readonly int[] PollChoices = { 90, 120, 180, 300 };
 
     /// <summary>Orb diameter in device-independent pixels.</summary>
     public int OrbSize { get; set; } = 72;
@@ -80,7 +80,7 @@ internal sealed class Settings
     {
         OrbSize = Math.Clamp(OrbSize, 32, 160);
         Opacity = Math.Clamp(Opacity, 0.3, 1.0);
-        PollSeconds = Math.Clamp(PollSeconds, 60, 900);
+        PollSeconds = Math.Clamp(PollSeconds, 90, 900);
         if (CenterMetric is not ("session" or "lowest"))
         {
             CenterMetric = "session";
